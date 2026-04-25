@@ -1,3 +1,4 @@
 package pcd.sketch01;
 
-public record Boundary (double x0, double y0, double x1, double y1){}
+public record Boundary(double x0, double y0, double x1, double y1) {
+}

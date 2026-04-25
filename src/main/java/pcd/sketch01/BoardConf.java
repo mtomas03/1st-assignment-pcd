@@ -4,9 +4,9 @@ import java.util.List;
 
 public interface BoardConf {
 
-	Boundary getBoardBoundary();
-	
-	Ball getPlayerBall();
-	
-	List<Ball> getSmallBalls();
+    Boundary getBoardBoundary();
+
+    Ball getPlayerBall();
+
+    List<Ball> getSmallBalls();
 }
