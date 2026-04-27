@@ -14,20 +14,38 @@ public class CommandQueue {
     private static final double IMPULSE = 0.8;
     private final BoundedBuffer<Command> buffer = new BoundedBuffer<>(256);
 
+    /**
+     * Enqueues a player movement command using a direction vector.
+     *
+     * <p>Diagonal inputs are supported by passing both components.
+     * The vector is normalized so diagonal movement does not travel
+     * faster than axis-aligned movement.</p>
+     *
+     * @param dx horizontal movement component
+     * @param dy vertical movement component
+     */
+    public void playerMove(double dx, double dy) {
+        var direction = new V2d(dx, dy);
+        if (direction.abs() < 1e-9) {
+            return;
+        }
+        put(new PlayerMoveCommand(direction.normalized().mul(IMPULSE)));
+    }
+
     public void playerUp() {
-        put(new PlayerMoveCommand(new V2d(0, IMPULSE)));
+        playerMove(0, 1);
     }
 
     public void playerDown() {
-        put(new PlayerMoveCommand(new V2d(0, -IMPULSE)));
+        playerMove(0, -1);
     }
 
     public void playerLeft() {
-        put(new PlayerMoveCommand(new V2d(-IMPULSE, 0)));
+        playerMove(-1, 0);
     }
 
     public void playerRight() {
-        put(new PlayerMoveCommand(new V2d(IMPULSE, 0)));
+        playerMove(1, 0);
     }
 
     public void botMove(V2d impulse) {

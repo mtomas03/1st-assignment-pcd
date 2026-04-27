@@ -37,7 +37,7 @@ public class View {
     }
 
     /**
-     * Called by the GameEngine thread to request a synchronous repaint.
+     * Called by the Controller thread to request a synchronous repaint.
      */
     public void render() throws InterruptedException {
         frame.render();

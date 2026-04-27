@@ -10,7 +10,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 
 /**
  * Main Swing window of the game.
@@ -32,8 +31,14 @@ public class ViewFrame extends JFrame {
     private static final int W = 1200, H = 800;
 
     private final ViewModel viewModel;
+    private final CommandQueue cmdQueue;
     private final RenderSynch sync = new RenderSynch();
     private final VisualiserPanel panel;
+
+    private boolean upPressed;
+    private boolean downPressed;
+    private boolean leftPressed;
+    private boolean rightPressed;
 
     /**
      * Creates the main window and registers keyboard handlers.
@@ -44,6 +49,7 @@ public class ViewFrame extends JFrame {
     public ViewFrame(ViewModel viewModel, CommandQueue cmdQueue) {
         super("Poool");
         this.viewModel = viewModel;
+        this.cmdQueue = cmdQueue;
 
         setSize(W, H + 25);
         setResizable(false);
@@ -55,16 +61,42 @@ public class ViewFrame extends JFrame {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_UP -> cmdQueue.playerUp();
-                    case KeyEvent.VK_DOWN -> cmdQueue.playerDown();
-                    case KeyEvent.VK_LEFT -> cmdQueue.playerLeft();
-                    case KeyEvent.VK_RIGHT -> cmdQueue.playerRight();
-                }
+                updatePressedState(e.getKeyCode(), true);
+                enqueueCurrentMovement();
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                updatePressedState(e.getKeyCode(), false);
+                enqueueCurrentMovement();
             }
         });
         setFocusable(true);
         setFocusTraversalKeysEnabled(false);
+    }
+
+    private void updatePressedState(int keyCode, boolean pressed) {
+        switch (keyCode) {
+            case KeyEvent.VK_UP, KeyEvent.VK_W -> upPressed = pressed;
+            case KeyEvent.VK_DOWN, KeyEvent.VK_S -> downPressed = pressed;
+            case KeyEvent.VK_LEFT, KeyEvent.VK_A -> leftPressed = pressed;
+            case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> rightPressed = pressed;
+            default -> { }
+        }
+    }
+
+    private void enqueueCurrentMovement() {
+        double vx = 0;
+        double vy = 0;
+
+        if (upPressed) vy += 1;
+        if (downPressed) vy -= 1;
+        if (leftPressed) vx -= 1;
+        if (rightPressed) vx += 1;
+
+        if (vx != 0 && vy != 0) {
+            cmdQueue.playerMove(vx, vy);
+        }
     }
 
     /**
@@ -168,7 +200,7 @@ public class ViewFrame extends JFrame {
         }
 
         private void drawHud(Graphics2D g2, int numSmallBalls, int fps, int playerScore, int botScore) {
-            g2.setColor(Color.BLACK);
+            g2.setColor(Color.BLUE);
             g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
 
             FontMetrics fm = g2.getFontMetrics();
