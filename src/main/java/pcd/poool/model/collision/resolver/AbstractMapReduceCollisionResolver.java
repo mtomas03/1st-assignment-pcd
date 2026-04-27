@@ -6,8 +6,10 @@ import pcd.poool.model.collision.util.CollisionAccumulator;
 import pcd.poool.model.collision.util.UniformGridBroadPhase;
 import pcd.poool.model.ball.BallPair;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Shared support for collision resolvers that follow the same broad-phase plus map-reduce pipeline.
@@ -66,12 +68,110 @@ abstract class AbstractMapReduceCollisionResolver implements CollisionResolver {
     ) throws InterruptedException;
 
     /**
+     * Executes a strided work distribution over candidate pairs.
+     *
+     * <p>Each worker is assigned a subset of candidates using a strided pattern:
+     * worker 0 gets indices 0, workerCount, 2*workerCount, etc.
+     * worker 1 gets indices 1, 1+workerCount, 1+2*workerCount, etc.
+     *
+     * @param workerId worker/thread identifier (0 to workerCount-1)
+     * @param workerCount total number of workers/threads
+     * @param candidates candidate pairs to process
+     * @param balls ball list for index lookups
+     * @param localMap local accumulator map for this worker
+     */
+    protected final void processStridedCandidates(
+            int workerId,
+            int workerCount,
+            List<BallPair> candidates,
+            List<Ball> balls,
+            Map<Ball, CollisionAccumulator> localMap) {
+        int m = candidates.size();
+        for (int k = workerId; k < m; k += workerCount) {
+            BallPair pair = candidates.get(k);
+            Ball a = balls.get(pair.i());
+            Ball b = balls.get(pair.j());
+            CollisionAccumulator accA = localMap.computeIfAbsent(a, ignored -> new CollisionAccumulator());
+            CollisionAccumulator accB = localMap.computeIfAbsent(b, ignored -> new CollisionAccumulator());
+            BallCollision.resolveAccumulator(a, b, accA, accB);
+        }
+    }
+
+    /**
+     * Validates common inputs for big-ball collision resolution.
+     *
+     * @param hitter hitter attribution provided by caller
+     * @param smallBalls mutable list of small balls
+     * @return {@code true} when there is work to do, {@code false} when the list is empty
+     */
+    protected final boolean validateBigBallInputs(Ball.HitBy hitter, List<Ball> smallBalls) {
+        if (hitter == Ball.HitBy.NONE) {
+            throw new IllegalArgumentException("NONE is not a valid hitter for a big ball");
+        }
+        return smallBalls.isEmpty();
+    }
+
+    /**
+     * Executes strided map-phase work for collisions between one big ball and the small-ball list.
+     *
+     * @param workerId worker/task identifier (0 to workerCount-1)
+     * @param workerCount number of workers/tasks
+     * @param bigBall big ball involved in collisions
+     * @param smallBalls mutable list of small balls
+     * @param localMap thread/task-local accumulator map
+     * @param localHits thread/task-local set of small balls impacted by the big ball
+     */
+    protected final void processStridedBigBallCandidates(
+            int workerId,
+            int workerCount,
+            Ball bigBall,
+            List<Ball> smallBalls,
+            Map<Ball, CollisionAccumulator> localMap,
+            Set<Ball> localHits) {
+        for (int i = workerId; i < smallBalls.size(); i += workerCount) {
+            Ball small = smallBalls.get(i);
+            CollisionAccumulator accBig = localMap.computeIfAbsent(bigBall, ignored -> new CollisionAccumulator());
+            CollisionAccumulator accSmall = localMap.computeIfAbsent(small, ignored -> new CollisionAccumulator());
+            if (BallCollision.resolveAccumulator(bigBall, small, accBig, accSmall)) {
+                localHits.add(small);
+            }
+        }
+    }
+
+    /**
+     * Applies reduced big-ball map-reduce results and updates hitter attribution for impacted small balls.
+     *
+     * @param bigBall big ball involved in collisions
+     * @param hitter hitter attribution to set on impacted small balls
+     * @param smallBalls mutable list of small balls
+     * @param accumulatorMaps per-worker accumulator maps
+     * @param hitSets per-worker impacted-small sets
+     */
+    protected final void applyBigBallResults(
+            Ball bigBall,
+            Ball.HitBy hitter,
+            List<Ball> smallBalls,
+            List<Map<Ball, CollisionAccumulator>> accumulatorMaps,
+            List<Set<Ball>> hitSets) {
+        List<Ball> affectedBalls = new ArrayList<>(smallBalls.size() + 1);
+        affectedBalls.add(bigBall);
+        affectedBalls.addAll(smallBalls);
+        reduceAndApply(affectedBalls, accumulatorMaps);
+
+        for (Set<Ball> localHits : hitSets) {
+            for (Ball hitSmall : localHits) {
+                hitSmall.setLastHitBy(hitter);
+            }
+        }
+    }
+
+    /**
      * Reduces all per-worker maps and applies the resulting deltas once per ball.
      *
      * @param balls mutable list of balls to update
      * @param accumulatorMaps per-worker accumulator maps produced by the map phase
      */
-    protected final void reduceAndApply(List<Ball> balls, List<Map<Ball, CollisionAccumulator>> accumulatorMaps) {
+    private void reduceAndApply(List<Ball> balls, List<Map<Ball, CollisionAccumulator>> accumulatorMaps) {
         for (Ball ball : balls) {
             double dx = 0, dy = 0, dvx = 0, dvy = 0;
             for (Map<Ball, CollisionAccumulator> map : accumulatorMaps) {
@@ -96,7 +196,7 @@ abstract class AbstractMapReduceCollisionResolver implements CollisionResolver {
      * @param dvx total x velocity delta
      * @param dvy total y velocity delta
      */
-    protected final void applyMergedDeltas(Ball ball, double dx, double dy, double dvx, double dvy) {
+    private void applyMergedDeltas(Ball ball, double dx, double dy, double dvx, double dvy) {
         if (dx == 0 && dy == 0 && dvx == 0 && dvy == 0) {
             return;
         }
@@ -104,36 +204,6 @@ abstract class AbstractMapReduceCollisionResolver implements CollisionResolver {
         CollisionAccumulator merged = new CollisionAccumulator();
         merged.add(dx, dy, dvx, dvy);
         BallCollision.applyAccumulator(ball, merged);
-    }
-
-    /**
-     * Executes a strided work distribution over candidate pairs.
-     *
-     * <p>Each worker is assigned a subset of candidates using a strided pattern:
-     * worker 0 gets indices 0, workerCount, 2*workerCount, etc.
-     * worker 1 gets indices 1, 1+workerCount, 1+2*workerCount, etc.
-     *
-     * @param workerId worker/thread identifier (0 to workerCount-1)
-     * @param workerCount total number of workers/threads
-     * @param candidates candidate pairs to process
-     * @param balls ball list for index lookups
-     * @param localMap local accumulator map for this worker
-     */
-    protected static void processStridedCandidates(
-            int workerId,
-            int workerCount,
-            List<BallPair> candidates,
-            List<Ball> balls,
-            Map<Ball, CollisionAccumulator> localMap) {
-        int m = candidates.size();
-        for (int k = workerId; k < m; k += workerCount) {
-            BallPair pair = candidates.get(k);
-            Ball a = balls.get(pair.i());
-            Ball b = balls.get(pair.j());
-            CollisionAccumulator accA = localMap.computeIfAbsent(a, ignored -> new CollisionAccumulator());
-            CollisionAccumulator accB = localMap.computeIfAbsent(b, ignored -> new CollisionAccumulator());
-            BallCollision.resolveAccumulator(a, b, accA, accB);
-        }
     }
 }
 

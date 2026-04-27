@@ -1,7 +1,6 @@
 package pcd.poool.model.board;
 
 import pcd.poool.model.ball.Ball;
-import pcd.poool.model.ball.BallCollision;
 import pcd.poool.model.board.configuration.BoardConf;
 import pcd.poool.model.collision.resolver.CollisionResolver;
 
@@ -82,30 +81,11 @@ public class Board {
      * @throws InterruptedException if the configured small-ball resolver is interrupted
      */
     private void checkCollisions() throws InterruptedException {
-        resolveBigBallCollisions(Ball.HitBy.PLAYER);
-        resolveBigBallCollisions(Ball.HitBy.BOT);
+        collisionResolver.resolveBigBallCollisions(playerBall, Ball.HitBy.PLAYER, smallBalls);
+        collisionResolver.resolveBigBallCollisions(botBall, Ball.HitBy.BOT, smallBalls);
         collisionResolver.resolve(smallBalls);
     }
 
-    /**
-     * Resolves collisions between one big ball (player or bot) and all small balls.
-     *
-     * @param hitter identifies which big ball is used and recorded as last hitter
-     */
-    private void resolveBigBallCollisions(Ball.HitBy hitter) {
-        Ball bigBall = switch (hitter) {
-            case PLAYER -> playerBall;
-            case BOT -> botBall;
-            case NONE -> throw new IllegalArgumentException("NONE is not a valid player");
-        };
-
-        for (Ball b : smallBalls) {
-            boolean hit = BallCollision.resolve(bigBall, b);
-            if (hit) {
-                b.setLastHitBy(hitter);
-            }
-        }
-    }
 
     /**
      * Checks whether any ball has entered a hole, updates scores, removes
@@ -185,15 +165,6 @@ public class Board {
      */
     public List<Hole> getHoles() {
         return holes;
-    }
-
-    /**
-     * Returns board boundaries used by movement and bounce logic.
-     *
-     * @return boundary rectangle
-     */
-    public Boundary getBounds() {
-        return bounds;
     }
 
     /**
