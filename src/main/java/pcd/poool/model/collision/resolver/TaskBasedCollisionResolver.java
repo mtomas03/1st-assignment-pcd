@@ -1,9 +1,7 @@
 package pcd.poool.model.collision.resolver;
 
 import pcd.poool.model.ball.Ball;
-import pcd.poool.model.ball.BallCollision;
-import pcd.poool.model.collision.util.BallPair;
-import pcd.poool.model.collision.util.UniformGridBroadPhase;
+import pcd.poool.model.ball.BallPair;
 import pcd.poool.model.collision.util.CollisionAccumulator;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,16 +18,13 @@ import java.util.concurrent.TimeUnit;
  * Task-based collision resolver using broad-phase candidates.
  *
  * <p>Work is partitioned into callables submitted to an {@link ExecutorService}.
- * Each task accumulates collision deltas into a private map (map phase), and
- * the caller merges and applies those deltas once per ball (reduce phase).
+ * Each task accumulates collision deltas into a private map, while the shared
+ * base class handles the reduction and application phase.
  */
-public class TaskBasedCollisionResolver implements CollisionResolver, AutoCloseable {
-
-    private static final double DEFAULT_CELL_SIZE = 0.02;
+public class TaskBasedCollisionResolver extends AbstractMapReduceCollisionResolver implements AutoCloseable {
 
     private final ExecutorService executor;
     private final int taskCount;
-    private final UniformGridBroadPhase broadPhase;
 
     /**
      * Creates a resolver using a fixed thread pool with default broad-phase cell size.
@@ -37,7 +32,7 @@ public class TaskBasedCollisionResolver implements CollisionResolver, AutoClosea
      * @param taskCount number of map tasks (must be greater than zero)
      */
     public TaskBasedCollisionResolver(int taskCount) {
-        this(taskCount, DEFAULT_CELL_SIZE);
+        this(taskCount, 0.02);
     }
 
     /**
@@ -47,12 +42,12 @@ public class TaskBasedCollisionResolver implements CollisionResolver, AutoClosea
      * @param cellSize uniform-grid cell size used by the broad phase
      */
     public TaskBasedCollisionResolver(int taskCount, double cellSize) {
+        super(cellSize);
         if (taskCount <= 0) {
             throw new IllegalArgumentException("taskCount must be > 0");
         }
         this.executor = Executors.newFixedThreadPool(taskCount);
         this.taskCount = taskCount;
-        this.broadPhase = new UniformGridBroadPhase(cellSize);
     }
 
     /**
@@ -81,25 +76,15 @@ public class TaskBasedCollisionResolver implements CollisionResolver, AutoClosea
      * @throws InterruptedException if interrupted while waiting for task results
      */
     @Override
-    public void resolve(List<Ball> balls) throws InterruptedException {
-        List<BallPair> candidates = broadPhase.computeCandidates(balls);
-        int m = candidates.size();
-        if (m == 0) return;
-
+    protected List<Map<Ball, CollisionAccumulator>> computeAccumulatorMaps(List<Ball> balls, List<BallPair> candidates)
+            throws InterruptedException {
         List<Future<Map<Ball, CollisionAccumulator>>> futures = new ArrayList<>(taskCount);
 
         for (int t = 0; t < taskCount; t++) {
             final int tid = t;
             Callable<Map<Ball, CollisionAccumulator>> task = () -> {
                 Map<Ball, CollisionAccumulator> localMap = new HashMap<>();
-                for (int k = tid; k < m; k += taskCount) {
-                    BallPair pair = candidates.get(k);
-                    Ball a = balls.get(pair.i());
-                    Ball b = balls.get(pair.j());
-                    CollisionAccumulator accA = localMap.computeIfAbsent(a, ignored -> new CollisionAccumulator());
-                    CollisionAccumulator accB = localMap.computeIfAbsent(b, ignored -> new CollisionAccumulator());
-                    BallCollision.resolveAccumulator(a, b, accA, accB);
-                }
+                processStridedCandidates(tid, taskCount, candidates, balls, localMap);
                 return localMap;
             };
             futures.add(executor.submit(task));
@@ -114,22 +99,6 @@ public class TaskBasedCollisionResolver implements CollisionResolver, AutoClosea
             throw new RuntimeException("Error in collision task", e.getCause());
         }
 
-        for (Ball ball : balls) {
-            double dx = 0, dy = 0, dvx = 0, dvy = 0;
-            for (Map<Ball, CollisionAccumulator> map : results) {
-                CollisionAccumulator acc = map.get(ball);
-                if (acc != null) {
-                    dx += acc.getDx();
-                    dy += acc.getDy();
-                    dvx += acc.getDvx();
-                    dvy += acc.getDvy();
-                }
-            }
-            if (dx != 0 || dy != 0 || dvx != 0 || dvy != 0) {
-                CollisionAccumulator merged = new CollisionAccumulator();
-                merged.add(dx, dy, dvx, dvy);
-                BallCollision.applyAccumulator(ball, merged);
-            }
-        }
+        return results;
     }
 }

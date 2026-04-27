@@ -1,4 +1,4 @@
-package pcd.poool.model.collision.util;
+package pcd.poool.model.ball;
 
 /**
  * Immutable pair of indexes into the small-ball list.

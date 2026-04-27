@@ -2,7 +2,7 @@ package pcd.poool.model.collision.resolver;
 
 import pcd.poool.model.ball.Ball;
 import pcd.poool.model.ball.BallCollision;
-import pcd.poool.model.collision.util.BallPair;
+import pcd.poool.model.ball.BallPair;
 import pcd.poool.model.collision.util.UniformGridBroadPhase;
 
 import java.util.List;

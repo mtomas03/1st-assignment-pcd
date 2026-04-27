@@ -1,6 +1,7 @@
 package pcd.poool.model.collision.util;
 
 import pcd.poool.model.ball.Ball;
+import pcd.poool.model.ball.BallPair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
