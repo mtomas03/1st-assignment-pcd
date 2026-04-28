@@ -3,11 +3,16 @@ package pcd.poool.model.board;
 import pcd.poool.model.ball.Ball;
 import pcd.poool.util.P2d;
 
+import java.util.Objects;
+
 /**
  * Represents a hole on the board. A ball is considered "in the hole"
  * when its center lies within the hole's radius.
  */
-public record Hole(P2d center, double radius) {
+public final class Hole {
+    private final P2d center;
+    private final double radius;
+
 
     /**
      * Creates a hole with center and radius.
@@ -15,7 +20,9 @@ public record Hole(P2d center, double radius) {
      * @param center hole center in board coordinates
      * @param radius hole capture radius
      */
-    public Hole {
+    public Hole(P2d center, double radius) {
+        this.center = center;
+        this.radius = radius;
     }
 
     /**
@@ -32,7 +39,6 @@ public record Hole(P2d center, double radius) {
      *
      * @return hole center
      */
-    @Override
     public P2d center() {
         return center;
     }
@@ -42,8 +48,29 @@ public record Hole(P2d center, double radius) {
      *
      * @return hole radius
      */
-    @Override
     public double radius() {
         return radius;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (Hole) obj;
+        return Objects.equals(this.center, that.center) &&
+                Double.doubleToLongBits(this.radius) == Double.doubleToLongBits(that.radius);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(center, radius);
+    }
+
+    @Override
+    public String toString() {
+        return "Hole[" +
+                "center=" + center + ", " +
+                "radius=" + radius + ']';
+    }
+
 }

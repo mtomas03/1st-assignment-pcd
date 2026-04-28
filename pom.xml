@@ -12,9 +12,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>11</maven.compiler.release>
     </properties>
 
     <build>
@@ -41,28 +41,18 @@
                 <version>3.4.2</version>
             </plugin>
 
-            <!--
-              Three shaded JARs, one per entry point.
-              Build all with:  mvn package
-              Run serial:      java -jar target/poool-serial.jar
-              Run V1:          java -Dthreads=4 -jar target/poool-v1.jar
-              Run V2:          java -Dthreads=4 -jar target/poool-v2.jar
-              Run benchmark:   java -jar target/poool-bench.jar
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.6.0</version>
                 <executions>
-
                     <execution>
-                        <id>serial</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>poool-serial</finalName>
+                            <finalName>poool</finalName>
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
@@ -71,58 +61,6 @@
                             </transformers>
                         </configuration>
                     </execution>
-
-                    <execution>
-                        <id>v1</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>poool-v1</finalName>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>pcd.poool.V1Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>v2</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>poool-v2</finalName>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>pcd.poool.V2Main</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>bench</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>poool-bench</finalName>
-                            <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>pcd.poool.benchmark.CollisionResolverBenchmark</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
-                    </execution>
-
                 </executions>
             </plugin>
 

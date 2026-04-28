@@ -104,9 +104,14 @@ public class Board {
                 if (h.contains(b)) {
                     toRemove.add(b);
                     switch (b.getLastHitBy()) {
-                        case PLAYER -> playerScore++;
-                        case BOT -> botScore++;
-                        default -> { /* no score change */ }
+                        case PLAYER:
+                            playerScore++;
+                            break;
+                        case BOT:
+                            botScore++;
+                            break;
+                        default:
+                            break;
                     }
                     break; // each ball can only enter one hole
                 }

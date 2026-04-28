@@ -1,8 +1,46 @@
 package pcd.sketch01;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
-record BallViewInfo(P2d pos, double radius) {
+final class BallViewInfo {
+    private final P2d pos;
+    private final double radius;
+
+    BallViewInfo(P2d pos, double radius) {
+        this.pos = pos;
+        this.radius = radius;
+    }
+
+    public P2d pos() {
+        return pos;
+    }
+
+    public double radius() {
+        return radius;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (BallViewInfo) obj;
+        return Objects.equals(this.pos, that.pos) &&
+                Double.doubleToLongBits(this.radius) == Double.doubleToLongBits(that.radius);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(pos, radius);
+    }
+
+    @Override
+    public String toString() {
+        return "BallViewInfo[" +
+                "pos=" + pos + ", " +
+                "radius=" + radius + ']';
+    }
+
 }
 
 public class ViewModel {

@@ -77,11 +77,23 @@ public class ViewFrame extends JFrame {
 
     private void updatePressedState(int keyCode, boolean pressed) {
         switch (keyCode) {
-            case KeyEvent.VK_UP, KeyEvent.VK_W -> upPressed = pressed;
-            case KeyEvent.VK_DOWN, KeyEvent.VK_S -> downPressed = pressed;
-            case KeyEvent.VK_LEFT, KeyEvent.VK_A -> leftPressed = pressed;
-            case KeyEvent.VK_RIGHT, KeyEvent.VK_D -> rightPressed = pressed;
-            default -> { }
+            case KeyEvent.VK_UP:
+            case KeyEvent.VK_W:
+                upPressed = pressed;
+                return;
+            case KeyEvent.VK_DOWN:
+            case KeyEvent.VK_S:
+                downPressed = pressed;
+                return;
+            case KeyEvent.VK_LEFT:
+            case KeyEvent.VK_A:
+                leftPressed = pressed;
+                return;
+            case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_D:
+                rightPressed = pressed;
+                return;
+            default:
         }
     }
 
@@ -224,14 +236,27 @@ public class ViewFrame extends JFrame {
             g2.setColor(COLOR_OVERLAY);
             g2.fillRect(0, 0, getWidth(), getHeight());
 
-            String msg = switch (status) {
-                case PLAYER_WINS -> "Victory: Player wins the match!";
-                case BOT_WINS -> "Defeat: Bot wins the match!";
-                case DRAW -> "Match ended in a draw.";
-                case PLAYER_DEAD -> "Defeat: Player eliminated!";
-                case BOT_DEAD -> "Victory: Bot eliminated!";
-                default -> "Game over!";
-            };
+            String msg;
+            switch (status) {
+                case PLAYER_WINS:
+                    msg = "Victory: Player wins the match!";
+                    break;
+                case BOT_WINS:
+                    msg = "Defeat: Bot wins the match!";
+                    break;
+                case DRAW:
+                    msg = "Match ended in a draw.";
+                    break;
+                case PLAYER_DEAD:
+                    msg = "Defeat: Player eliminated!";
+                    break;
+                case BOT_DEAD:
+                    msg = "Victory: Bot eliminated!";
+                    break;
+                default:
+                    msg = "Game over!";
+                    break;
+            }
 
             g2.setFont(new Font("SansSerif", Font.BOLD, 48));
             FontMetrics fm = g2.getFontMetrics();

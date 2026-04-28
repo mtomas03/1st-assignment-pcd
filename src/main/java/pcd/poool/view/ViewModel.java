@@ -8,6 +8,7 @@ import pcd.poool.view.info.HoleInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Thread-safe view model based on immutable snapshots.
@@ -30,18 +31,6 @@ public class ViewModel {
             0,
             Board.GameStatus.PLAYING
     );
-
-    public record Snapshot(
-            List<BallInfo> smallBalls,
-            List<HoleInfo> holes,
-            BallInfo playerBall,
-            BallInfo botBall,
-            int playerScore,
-            int botScore,
-            int fps,
-            Board.GameStatus status
-    ) {
-    }
 
     /**
      * Builds and publishes a new immutable snapshot of the current board state.
@@ -91,5 +80,101 @@ public class ViewModel {
      */
     public Snapshot getSnapshot() {
         return snapshot;
+    }
+
+    public static final class Snapshot {
+        private final List<BallInfo> smallBalls;
+        private final List<HoleInfo> holes;
+        private final BallInfo playerBall;
+        private final BallInfo botBall;
+        private final int playerScore;
+        private final int botScore;
+        private final int fps;
+        private final Board.GameStatus status;
+
+        public Snapshot(
+                List<BallInfo> smallBalls,
+                List<HoleInfo> holes,
+                BallInfo playerBall,
+                BallInfo botBall,
+                int playerScore,
+                int botScore,
+                int fps,
+                Board.GameStatus status
+        ) {
+            this.smallBalls = smallBalls;
+            this.holes = holes;
+            this.playerBall = playerBall;
+            this.botBall = botBall;
+            this.playerScore = playerScore;
+            this.botScore = botScore;
+            this.fps = fps;
+            this.status = status;
+        }
+
+        public List<BallInfo> smallBalls() {
+            return smallBalls;
+        }
+
+        public List<HoleInfo> holes() {
+            return holes;
+        }
+
+        public BallInfo playerBall() {
+            return playerBall;
+        }
+
+        public BallInfo botBall() {
+            return botBall;
+        }
+
+        public int playerScore() {
+            return playerScore;
+        }
+
+        public int botScore() {
+            return botScore;
+        }
+
+        public int fps() {
+            return fps;
+        }
+
+        public Board.GameStatus status() {
+            return status;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (Snapshot) obj;
+            return Objects.equals(this.smallBalls, that.smallBalls) &&
+                    Objects.equals(this.holes, that.holes) &&
+                    Objects.equals(this.playerBall, that.playerBall) &&
+                    Objects.equals(this.botBall, that.botBall) &&
+                    this.playerScore == that.playerScore &&
+                    this.botScore == that.botScore &&
+                    this.fps == that.fps &&
+                    Objects.equals(this.status, that.status);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(smallBalls, holes, playerBall, botBall, playerScore, botScore, fps, status);
+        }
+
+        @Override
+        public String toString() {
+            return "Snapshot[" +
+                    "smallBalls=" + smallBalls + ", " +
+                    "holes=" + holes + ", " +
+                    "playerBall=" + playerBall + ", " +
+                    "botBall=" + botBall + ", " +
+                    "playerScore=" + playerScore + ", " +
+                    "botScore=" + botScore + ", " +
+                    "fps=" + fps + ", " +
+                    "status=" + status + ']';
+        }
     }
 }

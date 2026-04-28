@@ -3,12 +3,8 @@ package pcd.poool.model.collision.resolver;
 import pcd.poool.model.ball.Ball;
 import pcd.poool.model.ball.BallPair;
 import pcd.poool.model.collision.util.CollisionAccumulator;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -24,8 +20,6 @@ import java.util.concurrent.TimeUnit;
  * base class handles the reduction and application phase.
  */
 public class TaskBasedCollisionResolver extends AbstractMapReduceCollisionResolver implements AutoCloseable {
-
-    private record BigBallTaskResult(Map<Ball, CollisionAccumulator> map, Set<Ball> hitSmalls) {}
 
     private final ExecutorService executor;
     private final int taskCount;
@@ -150,5 +144,44 @@ public class TaskBasedCollisionResolver extends AbstractMapReduceCollisionResolv
         }
 
         super.applyBigBallResults(bigBall, hitter, smallBalls, accMaps, hitSets);
+    }
+
+    private static final class BigBallTaskResult {
+        private final Map<Ball, CollisionAccumulator> map;
+        private final Set<Ball> hitSmalls;
+
+        private BigBallTaskResult(Map<Ball, CollisionAccumulator> map, Set<Ball> hitSmalls) {
+            this.map = map;
+            this.hitSmalls = hitSmalls;
+        }
+
+        public Map<Ball, CollisionAccumulator> map() {
+            return map;
+        }
+
+        public Set<Ball> hitSmalls() {
+            return hitSmalls;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (BigBallTaskResult) obj;
+            return Objects.equals(this.map, that.map) &&
+                    Objects.equals(this.hitSmalls, that.hitSmalls);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(map, hitSmalls);
+        }
+
+        @Override
+        public String toString() {
+            return "BigBallTaskResult[" +
+                    "map=" + map + ", " +
+                    "hitSmalls=" + hitSmalls + ']';
+        }
     }
 }

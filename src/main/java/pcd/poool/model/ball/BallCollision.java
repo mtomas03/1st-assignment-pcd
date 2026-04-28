@@ -4,6 +4,8 @@ import pcd.poool.model.collision.util.CollisionAccumulator;
 import pcd.poool.util.P2d;
 import pcd.poool.util.V2d;
 
+import java.util.Objects;
+
 /**
  * Utility class for ball-ball collision handling.
  *
@@ -24,44 +26,6 @@ public final class BallCollision {
     private static final double MAX_SPEED_AFTER_ACCUMULATOR = 2.0;
 
     private BallCollision() {
-    }
-
-    private record CollisionData(
-            double nx, double ny,
-            double af, double bf,
-            double adVx, double adVy,
-            double bdVx, double bdVy) {
-    }
-
-    private static CollisionData compute(Ball a, Ball b) {
-        double dx = b.getPos().x() - a.getPos().x();
-        double dy = b.getPos().y() - a.getPos().y();
-        double dist = Math.hypot(dx, dy);
-        double minD = a.getRadius() + b.getRadius();
-        if (dist >= minD || dist < EPSILON) return null;
-
-        double nx = dx / dist;
-        double ny = dy / dist;
-        double overlap = minD - dist;
-        double totalM = a.getMass() + b.getMass();
-
-        double af = overlap * b.getMass() / totalM;
-        double bf = overlap * a.getMass() / totalM;
-
-        double dvx = b.getVel().x() - a.getVel().x();
-        double dvy = b.getVel().y() - a.getVel().y();
-        double dvn = dvx * nx + dvy * ny;
-
-        double adVx = 0, adVy = 0, bdVx = 0, bdVy = 0;
-        if (dvn <= 0) {
-            double imp = -(1 + RESTITUTION_FACTOR) * dvn / (1.0 / a.getMass() + 1.0 / b.getMass());
-            adVx = -imp / a.getMass() * nx;
-            adVy = -imp / a.getMass() * ny;
-            bdVx = imp / b.getMass() * nx;
-            bdVy = imp / b.getMass() * ny;
-        }
-
-        return new CollisionData(nx, ny, af, bf, adVx, adVy, bdVx, bdVy);
     }
 
     /**
@@ -134,5 +98,128 @@ public final class BallCollision {
             return vector;
         }
         return vector.mul(maxMagnitude / magnitude);
+    }
+
+    private static CollisionData compute(Ball a, Ball b) {
+        double dx = b.getPos().x() - a.getPos().x();
+        double dy = b.getPos().y() - a.getPos().y();
+        double dist = Math.hypot(dx, dy);
+        double minD = a.getRadius() + b.getRadius();
+        if (dist >= minD || dist < EPSILON) return null;
+
+        double nx = dx / dist;
+        double ny = dy / dist;
+        double overlap = minD - dist;
+        double totalM = a.getMass() + b.getMass();
+
+        double af = overlap * b.getMass() / totalM;
+        double bf = overlap * a.getMass() / totalM;
+
+        double dvx = b.getVel().x() - a.getVel().x();
+        double dvy = b.getVel().y() - a.getVel().y();
+        double dvn = dvx * nx + dvy * ny;
+
+        double adVx = 0, adVy = 0, bdVx = 0, bdVy = 0;
+        if (dvn <= 0) {
+            double imp = -(1 + RESTITUTION_FACTOR) * dvn / (1.0 / a.getMass() + 1.0 / b.getMass());
+            adVx = -imp / a.getMass() * nx;
+            adVy = -imp / a.getMass() * ny;
+            bdVx = imp / b.getMass() * nx;
+            bdVy = imp / b.getMass() * ny;
+        }
+
+        return new CollisionData(nx, ny, af, bf, adVx, adVy, bdVx, bdVy);
+    }
+
+    private static final class CollisionData {
+        private final double nx;
+        private final double ny;
+        private final double af;
+        private final double bf;
+        private final double adVx;
+        private final double adVy;
+        private final double bdVx;
+        private final double bdVy;
+
+        private CollisionData(
+                double nx, double ny,
+                double af, double bf,
+                double adVx, double adVy,
+                double bdVx, double bdVy) {
+            this.nx = nx;
+            this.ny = ny;
+            this.af = af;
+            this.bf = bf;
+            this.adVx = adVx;
+            this.adVy = adVy;
+            this.bdVx = bdVx;
+            this.bdVy = bdVy;
+        }
+
+        public double nx() {
+            return nx;
+        }
+
+        public double ny() {
+            return ny;
+        }
+
+        public double af() {
+            return af;
+        }
+
+        public double bf() {
+            return bf;
+        }
+
+        public double adVx() {
+            return adVx;
+        }
+
+        public double adVy() {
+            return adVy;
+        }
+
+        public double bdVx() {
+            return bdVx;
+        }
+
+        public double bdVy() {
+            return bdVy;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            if (obj == null || obj.getClass() != this.getClass()) return false;
+            var that = (CollisionData) obj;
+            return Double.doubleToLongBits(this.nx) == Double.doubleToLongBits(that.nx) &&
+                    Double.doubleToLongBits(this.ny) == Double.doubleToLongBits(that.ny) &&
+                    Double.doubleToLongBits(this.af) == Double.doubleToLongBits(that.af) &&
+                    Double.doubleToLongBits(this.bf) == Double.doubleToLongBits(that.bf) &&
+                    Double.doubleToLongBits(this.adVx) == Double.doubleToLongBits(that.adVx) &&
+                    Double.doubleToLongBits(this.adVy) == Double.doubleToLongBits(that.adVy) &&
+                    Double.doubleToLongBits(this.bdVx) == Double.doubleToLongBits(that.bdVx) &&
+                    Double.doubleToLongBits(this.bdVy) == Double.doubleToLongBits(that.bdVy);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(nx, ny, af, bf, adVx, adVy, bdVx, bdVy);
+        }
+
+        @Override
+        public String toString() {
+            return "CollisionData[" +
+                    "nx=" + nx + ", " +
+                    "ny=" + ny + ", " +
+                    "af=" + af + ", " +
+                    "bf=" + bf + ", " +
+                    "adVx=" + adVx + ", " +
+                    "adVy=" + adVy + ", " +
+                    "bdVx=" + bdVx + ", " +
+                    "bdVy=" + bdVy + ']';
+        }
+
     }
 }
