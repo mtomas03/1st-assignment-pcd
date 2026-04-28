@@ -1,12 +1,16 @@
 target=pcd.poool.jpf.TestTaskBasedCollisionResolver
-
 classpath=1st-assignment-pcd/target/classes;1st-assignment-pcd/target/test-classes
+
+vm.por=true
+vm.ignore_undeterministic_rescheduling=true
+search.depth_limit=500
+
+search.min_free=10M
+vm.storage.class=gov.nasa.jpf.vm.JenkinsStateSet
+
+cg.threads.break_start=true
+search.multiple_errors=true
 
 listener=gov.nasa.jpf.listener.PreciseRaceDetector
 search.class=gov.nasa.jpf.search.DFSearch
-vm.por=false
-cg.threads.break_start=true
-search.multiple_errors=true
-search.min_free=1M
-
 report.console.property_violation=error,trace

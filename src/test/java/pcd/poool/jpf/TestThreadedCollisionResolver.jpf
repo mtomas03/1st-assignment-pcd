@@ -1,12 +1,13 @@
 target=pcd.poool.jpf.TestThreadedCollisionResolver
-
 classpath=1st-assignment-pcd/target/classes;1st-assignment-pcd/target/test-classes
+
+vm.por=false
+
+search.min_free=1M
+
+cg.threads.break_start=true
+search.multiple_errors=true
 
 listener=gov.nasa.jpf.listener.PreciseRaceDetector
 search.class=gov.nasa.jpf.search.DFSearch
-vm.por=false
-cg.threads.break_start=true
-search.multiple_errors=true
-search.min_free=1M
-
 report.console.property_violation=error,trace
