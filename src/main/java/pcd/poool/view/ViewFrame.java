@@ -106,7 +106,7 @@ public class ViewFrame extends JFrame {
         if (leftPressed) vx -= 1;
         if (rightPressed) vx += 1;
 
-        if (vx != 0 && vy != 0) {
+        if (vx != 0 || vy != 0) {
             cmdQueue.playerMove(vx, vy);
         }
     }
