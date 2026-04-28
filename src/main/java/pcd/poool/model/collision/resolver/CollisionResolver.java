@@ -6,13 +6,10 @@ import pcd.poool.model.ball.BallCollision;
 import java.util.List;
 
 /**
- * Strategy interface for small-ball vs small-ball collision resolution.
- *
- * <p>Implementations range from a simple O(n²) serial pass to fully parallel
- * multithreaded and task-based approaches. The interface is kept intentionally
- * narrow: the resolver only handles small-ball interactions; player and bot
- * collisions are handled separately by the board update pipeline.
+ * Strategy for resolving collisions among balls.
+ * Implementations define how small-ball collisions are processed.
  */
+@FunctionalInterface
 public interface CollisionResolver {
 
     /**

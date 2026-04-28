@@ -1,6 +1,7 @@
 package pcd.poool.model.board;
 
 import pcd.poool.model.ball.Ball;
+import pcd.poool.model.ball.BallCollision;
 import pcd.poool.model.board.configuration.BoardConf;
 import pcd.poool.model.collision.resolver.CollisionResolver;
 
@@ -9,11 +10,11 @@ import java.util.List;
 
 /**
  * Holds the full game state (balls, holes, scores, status)
- * and provides the physics-update step.
+ * and coordinates the physics-update step.
  *
- * <p> Only the Controller thread modifies this object directly.
- * The View accesses it via a snapshot (ViewModel),
- * so no synchronization on Board itself is needed.
+ * <p>The board owns the game entities and is the only component that modifies
+ * them during the game loop. The View accesses the state only through
+ * immutable snapshots, so no synchronization on the board itself is needed.
  */
 public class Board {
 
@@ -47,8 +48,8 @@ public class Board {
     }
 
     /**
-     * The step updates movement, resolves collisions, and optionally evaluates
-     * hole interactions and scoring.
+     * The step first updates the position of all balls, then resolves all
+     * collision phases, and finally evaluates hole interactions if enabled.
      *
      * @param dt elapsed time in milliseconds
      * @param holesEnabled whether hole scoring/elimination must be evaluated
@@ -65,36 +66,27 @@ public class Board {
         }
     }
 
-    /**
-     * Updates the positions and velocities of all balls (friction + boundary).
-     * Collision resolution is handled separately by the {@code CollisionResolver}.
-     */
     private void updatePositions(long dt) {
         playerBall.updateState(dt, bounds);
         botBall.updateState(dt, bounds);
         for (Ball b : smallBalls) b.updateState(dt, bounds);
     }
 
-    /**
-     * Resolves player-small, bot-small, and small-small collisions.
-     *
-     * @throws InterruptedException if the configured small-ball resolver is interrupted
-     */
     private void checkCollisions() throws InterruptedException {
+        resolvePlayerBotCollision();
         collisionResolver.resolveBigBallCollisions(playerBall, Ball.HitBy.PLAYER, smallBalls);
         collisionResolver.resolveBigBallCollisions(botBall, Ball.HitBy.BOT, smallBalls);
         collisionResolver.resolve(smallBalls);
     }
 
+    private void resolvePlayerBotCollision() {
+        BallCollision.resolve(playerBall, botBall);
+    }
 
-    /**
-     * Checks whether any ball has entered a hole, updates scores, removes
-     * scored balls, and evaluates win conditions.
-     */
-    public void checkHoles() {
+
+    private void checkHoles() {
         if (status != GameStatus.PLAYING) return;
 
-        // Check player / bot balls in holes first (immediate loss)
         for (Hole h : holes) {
             if (h.contains(playerBall)) {
                 status = GameStatus.PLAYER_DEAD;
@@ -106,7 +98,6 @@ public class Board {
             }
         }
 
-        // Check small balls in holes
         List<Ball> toRemove = new ArrayList<>();
         for (Ball b : smallBalls) {
             for (Hole h : holes) {
@@ -123,7 +114,6 @@ public class Board {
         }
         smallBalls.removeAll(toRemove);
 
-        // End of game when no small balls remain
         if (smallBalls.isEmpty()) {
             if (playerScore > botScore) status = GameStatus.PLAYER_WINS;
             else if (botScore > playerScore) status = GameStatus.BOT_WINS;
