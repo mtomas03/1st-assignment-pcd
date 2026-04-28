@@ -9,6 +9,7 @@ import pcd.poool.model.collision.resolver.*;
 import pcd.poool.view.View;
 import pcd.poool.view.ViewModel;
 
+import java.util.Optional;
 import java.util.Random;
 import javax.swing.SwingUtilities;
 
@@ -48,19 +49,23 @@ public class CollisionResolverBenchmark {
         System.out.printf("%-10s %-42s %8s %8s %10s%n",
                 "Threads", "Resolver", "FPS", "Speedup", "Efficiency");
 
-        double serialFps = runBenchmark(new UniformGridSerialCollisionResolver());
-        printRow(1, "SerialCollisionResolver (baseline)", serialFps, 1.0, 1.0);
+        double naiveSerialFps = runBenchmark(new NaiveSerialCollisionResolver());
+        printRow(1, "NaiveSerialCollisionResolver", naiveSerialFps, null, null);
+
+        double uniformGridSerialFps = runBenchmark(new UniformGridSerialCollisionResolver());
+        printRow(1, "UniformGridSerialCollisionResolver (baseline)", uniformGridSerialFps,
+                1.0, 1.0);
 
         for (int n : new int[]{1, 2, 4, 8, 16}) {
             double fps = runBenchmark(new ThreadedCollisionResolver(n));
-            double speedup = fps / serialFps;
+            double speedup = fps / uniformGridSerialFps;
             double eff = speedup / n;
             printRow(n, "ThreadedCollisionResolver", fps, speedup, eff);
         }
 
         for (int n : new int[]{1, 2, 4, 8, 16}) {
             double fps = runBenchmark(new TaskBasedCollisionResolver(n));
-            double speedup = fps / serialFps;
+            double speedup = fps / uniformGridSerialFps;
             double eff = speedup / n;
             printRow(n, "TaskBasedCollisionResolver", fps, speedup, eff);
         }
@@ -129,9 +134,9 @@ public class CollisionResolverBenchmark {
             bot.stopBot();
             bot.join(500);
 
-            if (resolver instanceof AutoCloseable closeable) {
+            if (resolver instanceof AutoCloseable) {
                 try {
-                    closeable.close();
+                    ((AutoCloseable) resolver).close();
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to close resolver", e);
                 }
@@ -162,10 +167,18 @@ public class CollisionResolverBenchmark {
             while (!Thread.currentThread().isInterrupted()) {
                 int choice = rng.nextInt(4);
                 switch (choice) {
-                    case 0 -> cmdQueue.playerUp();
-                    case 1 -> cmdQueue.playerDown();
-                    case 2 -> cmdQueue.playerLeft();
-                    default -> cmdQueue.playerRight();
+                    case 0:
+                        cmdQueue.playerUp();
+                        break;
+                    case 1:
+                        cmdQueue.playerDown();
+                        break;
+                    case 2:
+                        cmdQueue.playerLeft();
+                        break;
+                    default:
+                        cmdQueue.playerRight();
+                        break;
                 }
                 try {
                     Thread.sleep(PLAYER_INPUT_INTERVAL_MS);
@@ -194,8 +207,10 @@ public class CollisionResolverBenchmark {
     }
 
     private static void printRow(int n, String name, double fps,
-                                 double speedup, double eff) {
-        System.out.printf("%-10d %-42s %8.2f %8.2fx %10.2f%n",
-                n, name, fps, speedup, eff);
+                                 Double speedup, Double eff) {
+        System.out.printf("%-10d %-42s %8.2f %8s %10s%n",
+                n, name, fps,
+                speedup != null ? String.format("%.2fx", speedup) : "-",
+                eff != null ? String.format("%.2f", eff) : "-");
     }
 }
